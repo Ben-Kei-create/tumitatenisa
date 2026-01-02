@@ -52,8 +52,8 @@ export class SpawnSystem {
 
     const brother = this.factory.createBrother(spawnX, spawnY, type);
 
-    // 仕様書準拠: 初期状態は HOLDING
-    brother.setBrotherState(BrotherState.HOLDING);
+    // 仕様書準拠: 初期状態は AIMING
+    brother.setBrotherState(BrotherState.AIMING);
 
     this.gameState.currentBrother = brother;
     return brother;

@@ -12,9 +12,9 @@ export class BrotherFactory {
     }
 
     createBrother(x: number, y: number, type: string): Brother {
+        // Sprite版Brotherはコンストラクタ内で物理設定を行うためシンプルに
         const brother = new Brother(this.scene, x, y, type, this.spec);
 
-        // Groupへの登録
         if (this.brotherGroup) {
             this.brotherGroup.add(brother);
         }

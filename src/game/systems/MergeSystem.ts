@@ -18,59 +18,62 @@ export class MergeSystem {
 
   mergeBrothers(a: Brother, b: Brother): void {
     const type = a.getType();
-    const nextType = this.spec.merge[type];
 
-    if (!nextType) return;
+    // ★修正: 進化ロジック (brothersOrderのインデックスを進める)
+    const order = this.spec.brothersOrder;
+    const currentIndex = order.indexOf(type);
 
-    // Lock immediately
+    // 定義にない、または最大ランク(最後)の場合は合体しない
+    if (currentIndex === -1 || currentIndex >= order.length - 1) {
+      return;
+    }
+
+    const nextType = order[currentIndex + 1];
+    const brotherSpec = this.spec.brothers[nextType];
+
+    // Lock
     a.mergeLock = true;
     b.mergeLock = true;
 
-    // Calculate midpoint
+    // Midpoint
     const x = (a.x + b.x) / 2;
     const y = (a.y + b.y) / 2;
 
-    // Remove old ones
+    // Destroy old
     a.destroy();
     b.destroy();
 
-    // Create new one
-    // 仕様書: 新Brotherは DROPPING 状態
+    // Create New
     const newBrother = this.factory.createBrother(x, y, nextType);
 
-    // 1. ポップアップ演出 (スケール0からボヨンと出現)
-    newBrother.setScale(0); // 最初は極小
-
+    // Animation & Physics
+    newBrother.setScale(0);
     this.scene.tweens.add({
       targets: newBrother,
-      scaleX: 1, // 元のサイズ(1倍)に戻す
+      scaleX: 1,
       scaleY: 1,
       duration: 300,
-      ease: 'Back.out', // ボヨンと弾むイージング
+      ease: 'Back.out'
     });
 
-    // 2. 物理挙動 (少し跳ねさせる)
     newBrother.setBrotherState(BrotherState.DROPPING);
-    newBrother.y -= 5; // 少し浮かせる
+    newBrother.y -= 5;
 
+    // 少し跳ねさせる
     const body = newBrother.body as Phaser.Physics.Arcade.Body;
-    // ランダムな方向に少し跳ねることで、詰まりを解消する効果も
     body.setVelocity(Phaser.Math.Between(-50, 50), -150);
 
-    // Score
-    const mergeScores: Record<string, number> = {
-      'A': 50,
-      'B': 150,
-      'C': 300
-    };
-    const points = mergeScores[type] || 50;
+    // 画面シェイク (サイズが大きいほど揺れる)
+    // A=0, B=1 ... 係数で揺れ幅調整
+    const shakeIntensity = 0.002 + (currentIndex * 0.002);
+    this.scene.cameras.main.shake(100, shakeIntensity);
 
-    // GameScene経由でイベント発火
+    // Event Emit
     this.scene.events.emit('merge-success', {
       x: x,
       y: y,
-      type: type,   // 合体前のタイプ（色用）
-      score: points
+      type: type, // パーティクル用に合体前の色を渡す
+      score: brotherSpec.score
     });
   }
 }

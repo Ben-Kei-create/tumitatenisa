@@ -11,7 +11,7 @@
         "allowRotation": true
     },
     "stage": {
-        "baseWidth": 240,
+        "baseWidth": 320,
         "baseHeight": 40,
         "bottomMargin": 150
     },
@@ -39,45 +39,56 @@
         "heightPerSec": 0,
         "heightClampY": 0
     },
-    "merge": {},
     "brothersOrder": [
         "A",
         "B",
         "C",
         "D",
         "E",
-        "F"
+        "F",
+        "G",
+        "H"
     ],
     "brothers": {
         "A": {
-            "size": 40,
+            "size": 30,
             "color": "#B8D8FF",
             "score": 10
         },
         "B": {
-            "size": 55,
+            "size": 38,
             "color": "#BFF0D2",
             "score": 20
         },
         "C": {
-            "size": 70,
+            "size": 48,
             "color": "#FFD7B5",
             "score": 40
         },
         "D": {
-            "size": 90,
+            "size": 60,
             "color": "#E5C1FF",
             "score": 80
         },
         "E": {
-            "size": 115,
+            "size": 75,
             "color": "#FFF5BA",
             "score": 160
         },
         "F": {
-            "size": 140,
+            "size": 95,
             "color": "#FF9999",
             "score": 320
+        },
+        "G": {
+            "size": 115,
+            "color": "#99CCFF",
+            "score": 640
+        },
+        "H": {
+            "size": 140,
+            "color": "#FFFF99",
+            "score": 1280
         }
     }
 }
