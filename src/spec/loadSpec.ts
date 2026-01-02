@@ -1,5 +1,11 @@
 import gameSpec from '../../game_spec.json';
 
+export interface BrotherSpec {
+  size: number;
+  color: string;
+  score: number;
+}
+
 export interface GameSpec {
   screen: {
     width: number;
@@ -17,12 +23,6 @@ export interface GameSpec {
     baseHeight: number;
     bottomMargin: number;
   };
-  brother: {
-    size: number;
-    fontSize: string;
-  };
-  brothers: string[];
-  merge: Record<string, string>;
   spawn: {
     y: number;
     xRange: number[];
@@ -33,20 +33,16 @@ export interface GameSpec {
     clampPadding: number;
     showDropGuide: boolean;
   };
-  score: {
-    mergeBase: number;
-    typeMultiplier: Record<string, number>;
-    heightMode: string;
-    heightPerSec: number;
-    heightClampY: number;
-  };
   gameOver: {
     lineY: number;
     lingerSec: number;
   };
+  // 新しい構造
+  brothersOrder: string[]; // 進化順序 ["A", "B", "C"...]
+  brothers: Record<string, BrotherSpec>; // 各スペック
+  merge: Record<string, string>; // Legacy support or empty
 }
 
 export function loadSpec(): GameSpec {
   return gameSpec as unknown as GameSpec;
 }
-

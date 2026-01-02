@@ -25,18 +25,21 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, `brother_${type}`);
     this.spec = spec;
 
+    // ★変更: specからこのタイプの情報を取得
+    const brotherSpec = this.spec.brothers[type];
+    const size = brotherSpec.size; // 個別のサイズ
+
     this.brotherData = {
       id: Phaser.Utils.String.UUID(),
       type,
       merged: false
     };
 
-    const size = spec.brother.size;
     this.setDisplaySize(size, size);
 
-    // テクスチャ生成（円形に変更）
+    // テクスチャ生成（色もspecから取得）
     if (!scene.textures.exists(`brother_${type}`)) {
-      this.createFallbackTexture(scene, type, size);
+      this.createFallbackTexture(scene, type, size, brotherSpec.color);
       this.setTexture(`brother_bg_${type}`);
     }
 
@@ -44,9 +47,10 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     this.setupPhysicsBody(size);
 
+    // テキストラベル
     this.label = scene.add.text(x, y, type, {
       fontFamily: 'system-ui, sans-serif',
-      fontSize: spec.brother.fontSize,
+      fontSize: `${Math.floor(size * 0.5)}px`, // 文字サイズも相対的に
       color: '#111111',
       fontStyle: 'bold'
     });
@@ -54,37 +58,28 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     this.label.setDepth(this.depth + 1);
   }
 
-  /**
-   * 円形のテクスチャを生成
-   */
-  private createFallbackTexture(scene: Phaser.Scene, type: string, size: number) {
+  private createFallbackTexture(scene: Phaser.Scene, type: string, size: number, colorHex: string) {
     const key = `brother_bg_${type}`;
     if (scene.textures.exists(key)) return;
 
     const radius = size / 2;
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-    const colors: Record<string, number> = {
-      'A': 0xB8D8FF,
-      'B': 0xBFF0D2,
-      'C': 0xFFD7B5
-    };
-    const color = colors[type] || 0xeeeeee;
 
+    // 文字列の色コード(#xxxxxx)を数値に変換
+    const color = parseInt(colorHex.replace('#', ''), 16);
+
+    // 本体
     graphics.fillStyle(color, 1);
-    // 円を描画
     graphics.fillCircle(radius, radius, radius);
     graphics.lineStyle(2, 0x000000, 0.1);
     graphics.strokeCircle(radius, radius, radius);
 
-    // 2. おめめ（シンプルに黒い点）を描く ★追加
-    graphics.fillStyle(0x000000, 0.6); // 少し薄い黒
-    const eyeSize = size * 0.1; // 本体の10%くらいの大きさ
-    const eyeY = radius - (size * 0.1); // 中心より少し上
-    const eyeXOffset = size * 0.2; // 中心から左右に離す距離
-
-    // 左目
+    // おめめ (サイズに合わせて調整)
+    graphics.fillStyle(0x000000, 0.6);
+    const eyeSize = size * 0.1;
+    const eyeY = radius - (size * 0.1);
+    const eyeXOffset = size * 0.2;
     graphics.fillCircle(radius - eyeXOffset, eyeY, eyeSize);
-    // 右目
     graphics.fillCircle(radius + eyeXOffset, eyeY, eyeSize);
 
     // テクスチャ生成（サイズは直径）

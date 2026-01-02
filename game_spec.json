@@ -5,54 +5,79 @@
         "bg": "#F7F7F7"
     },
     "physics": {
-        "gravityY": 800,
-        "restitution": 0.05,
-        "friction": 0.4,
+        "gravityY": 1200,
+        "restitution": 0.1,
+        "friction": 0.6,
         "allowRotation": true
     },
     "stage": {
-        "baseWidth": 220,
+        "baseWidth": 240,
         "baseHeight": 40,
-        "bottomMargin": 18
-    },
-    "brother": {
-        "size": 56,
-        "fontSize": "28px"
-    },
-    "brothers": [
-        "A",
-        "B",
-        "C"
-    ],
-    "merge": {
-        "A": "B",
-        "B": "C",
-        "C": "A"
-    },
-    "spawn": {
-        "y": 140,
-        "xRange": [-220,
-            220
-        ]
+        "bottomMargin": 20
     },
     "input": {
         "mode": "drag-release",
         "clampPadding": 30,
         "showDropGuide": true
     },
-    "score": {
-        "mergeBase": 100,
-        "typeMultiplier": {
-            "A": 1,
-            "B": 2,
-            "C": 3
-        },
-        "heightMode": "perSecond",
-        "heightPerSec": 5,
-        "heightClampY": 1100
+    "spawn": {
+        "y": 120,
+        "xRange": [
+            -160,
+            160
+        ],
+        "nextDelayMs": 600
     },
     "gameOver": {
         "lineY": 160,
         "lingerSec": 1.0
+    },
+    "score": {
+        "heightMode": "none",
+        "mergeBase": 0,
+        "typeMultiplier": {},
+        "heightPerSec": 0,
+        "heightClampY": 0
+    },
+    "merge": {},
+    "brothersOrder": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+    ],
+    "brothers": {
+        "A": {
+            "size": 40,
+            "color": "#B8D8FF",
+            "score": 10
+        },
+        "B": {
+            "size": 55,
+            "color": "#BFF0D2",
+            "score": 20
+        },
+        "C": {
+            "size": 70,
+            "color": "#FFD7B5",
+            "score": 40
+        },
+        "D": {
+            "size": 90,
+            "color": "#E5C1FF",
+            "score": 80
+        },
+        "E": {
+            "size": 115,
+            "color": "#FFF5BA",
+            "score": 160
+        },
+        "F": {
+            "size": 140,
+            "color": "#FF9999",
+            "score": 320
+        }
     }
 }
