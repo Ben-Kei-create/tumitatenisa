@@ -22,6 +22,7 @@ export class UIScene extends Phaser.Scene {
   create() {
     // HUD Layer
     this.createHUD();
+    this.createNextDisplay(); // ★追加
 
     // Overlay Layer (Hidden initially)
     this.createGameOverOverlay();
@@ -29,10 +30,46 @@ export class UIScene extends Phaser.Scene {
     // Listeners
     if (this.gameSceneEvents) {
       this.gameSceneEvents.on('game-over', this.showGameOver, this);
-      this.gameSceneEvents.on('update-next', (_nextType: string) => {
-        // TODO: Update Next UI display with nextType
-        // For now, just prevent crash
+      this.gameSceneEvents.on('update-next', (nextType: string) => {
+        this.updateNextDisplay(nextType);
       }, this);
+    }
+  }
+
+  // ★追加: NEXT表示エリアの作成
+  private createNextDisplay() {
+    const { width } = this.spec.screen;
+
+    // 右上に表示 ("NEXT" という文字)
+    this.add.text(width - 80, 20, 'NEXT', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '18px',
+      color: '#555',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // プレビュー用のダミースプライト（最初は非表示）
+    // ※位置は "NEXT" 文字の下あたり
+    this.nextPreviewSprite = this.add.sprite(width - 80, 60, '');
+    this.nextPreviewSprite.setVisible(false);
+  }
+
+  // ★追加: NEXT表示の更新
+  private updateNextDisplay(nextType: string) {
+    if (!this.nextPreviewSprite) return;
+
+    // テクスチャキー
+    const key = `brother_${nextType}`;
+    // テクスチャがまだ生成されていない場合（初回など）の対策
+    const fallbackKey = `brother_bg_${nextType}`;
+    const textureKey = this.textures.exists(key) ? key : fallbackKey;
+
+    if (this.textures.exists(textureKey)) {
+      this.nextPreviewSprite.setTexture(textureKey);
+      this.nextPreviewSprite.setVisible(true);
+
+      // NEXT表示は少し小さめに表示するとUIとして綺麗
+      this.nextPreviewSprite.setDisplaySize(32, 32);
     }
   }
 

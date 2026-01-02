@@ -38,13 +38,24 @@ export class MergeSystem {
     // 仕様書: 新Brotherは DROPPING 状態
     const newBrother = this.factory.createBrother(x, y, nextType);
 
-    // ポップアップ効果（少し浮かせて重力を効かせる）
-    newBrother.y -= 10;
-    newBrother.setBrotherState(BrotherState.DROPPING);
+    // 1. ポップアップ演出 (スケール0からボヨンと出現)
+    newBrother.setScale(0); // 最初は極小
 
-    // 物理的な勢いを少しつける（真上に跳ねる）
+    this.scene.tweens.add({
+      targets: newBrother,
+      scaleX: 1, // 元のサイズ(1倍)に戻す
+      scaleY: 1,
+      duration: 300,
+      ease: 'Back.out', // ボヨンと弾むイージング
+    });
+
+    // 2. 物理挙動 (少し跳ねさせる)
+    newBrother.setBrotherState(BrotherState.DROPPING);
+    newBrother.y -= 5; // 少し浮かせる
+
     const body = newBrother.body as Phaser.Physics.Arcade.Body;
-    body.setVelocityY(-150);
+    // ランダムな方向に少し跳ねることで、詰まりを解消する効果も
+    body.setVelocity(Phaser.Math.Between(-50, 50), -150);
 
     // Score
     const mergeScores: Record<string, number> = {

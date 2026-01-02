@@ -76,6 +76,17 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     graphics.lineStyle(2, 0x000000, 0.1);
     graphics.strokeCircle(radius, radius, radius);
 
+    // 2. おめめ（シンプルに黒い点）を描く ★追加
+    graphics.fillStyle(0x000000, 0.6); // 少し薄い黒
+    const eyeSize = size * 0.1; // 本体の10%くらいの大きさ
+    const eyeY = radius - (size * 0.1); // 中心より少し上
+    const eyeXOffset = size * 0.2; // 中心から左右に離す距離
+
+    // 左目
+    graphics.fillCircle(radius - eyeXOffset, eyeY, eyeSize);
+    // 右目
+    graphics.fillCircle(radius + eyeXOffset, eyeY, eyeSize);
+
     // テクスチャ生成（サイズは直径）
     graphics.generateTexture(key, size, size);
     graphics.destroy();
