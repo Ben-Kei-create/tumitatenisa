@@ -22,8 +22,7 @@
     },
     "spawn": {
         "y": 120,
-        "xRange": [
-            -160,
+        "xRange": [-160,
             160
         ],
         "nextDelayMs": 600
