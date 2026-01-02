@@ -29,9 +29,6 @@ export class UIScene extends Phaser.Scene {
     this.createHUD();
     this.createNextDisplay();
 
-    // Overlay Layer (Hidden initially)
-    this.createGameOverOverlay();
-
     // Listeners
     if (this.gameSceneEvents) {
       this.gameSceneEvents.on('game-over', this.showGameOver, this);

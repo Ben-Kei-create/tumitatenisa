@@ -43,7 +43,13 @@ export class GameOverSystem {
 
     console.log(`Game Over triggered: ${reason}`);
     this.gameState.gameOver = true;
+    // 物理演算を一時停止（完全に止めないと裏で動く）
     this.scene.physics.pause();
-    this.scene.events.emit('game-over', reason);
+
+    // ★修正: イベントに必要な情報を乗せる
+    this.scene.events.emit('game-over', {
+      reason,
+      score: this.gameState.score
+    });
   }
 }

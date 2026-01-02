@@ -93,6 +93,14 @@ export class GameScene extends Phaser.Scene {
       gameSceneEvents: this.events
     });
 
+    // --- ★追加・変更: ゲームオーバー処理 ---
+    // 以前のリスナーがあれば削除しておく（念のため）
+    this.events.off('game-over');
+
+    this.events.on('game-over', (data: { reason: string, score: number }) => {
+      this.handleGameOver(data);
+    });
+
     this.spawnSystem.spawnNext();
     this.time.delayedCall(100, () => {
       this.events.emit('update-next', this.spawnSystem.peekNextType());
@@ -151,6 +159,27 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         scoreText.destroy();
       }
+    });
+  }
+
+  private handleGameOver(data: { reason: string, score: number }) {
+    // ハイスコア判定（localStorage確認）
+    const saved = localStorage.getItem('tumitatenisa_highscore');
+    const highScore = saved ? parseInt(saved, 10) : 0;
+    const isNewRecord = data.score > highScore;
+
+    // UISceneを停止（HUDを消すため）
+    this.scene.stop('UIScene');
+
+    // GameOverSceneを起動（今のシーンの上に重ねる）
+    // pauseしないと裏でupdateが回る可能性があるが、physics.pause()してるのでOK
+    // ただし安全のためシーン自体のupdateも止める
+    this.scene.pause();
+
+    this.scene.launch('GameOverScene', {
+      spec: this.spec,
+      score: data.score,
+      isNewRecord: isNewRecord
     });
   }
 

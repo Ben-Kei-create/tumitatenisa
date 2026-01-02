@@ -4,13 +4,11 @@ import { BootScene } from './scenes/BootScene';
 import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
+import { GameOverScene } from './scenes/GameOverScene'; // ★追加
 
 export function createGame(spec: GameSpec, containerId: string = 'app'): Phaser.Game {
   const config: Phaser.Types.Core.GameConfig = {
-    type: Phaser.AUTO,
-    width: spec.screen.width,
-    height: spec.screen.height,
-    parent: containerId,
+    // ...
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
@@ -22,7 +20,8 @@ export function createGame(spec: GameSpec, containerId: string = 'app'): Phaser.
         debug: false
       }
     },
-    scene: [BootScene, TitleScene, GameScene, UIScene]
+    // ★GameOverScene をリストに追加
+    scene: [BootScene, TitleScene, GameScene, UIScene, GameOverScene]
   };
 
   const game = new Phaser.Game(config);
