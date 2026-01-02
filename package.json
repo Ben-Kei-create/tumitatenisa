@@ -1,0 +1,22 @@
+{
+  "name": "tumitatenisa",
+  "version": "1.0.0",
+  "description": "AI全自動生成に適した2D落ち物ゲーム（積み立てNISAN）",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "test": "npm run validate:spec && npm run build",
+    "validate:spec": "tsx scripts/validateSpec.ts"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8"
+  }
+}
+
