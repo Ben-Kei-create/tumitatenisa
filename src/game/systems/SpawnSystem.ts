@@ -35,7 +35,10 @@ export class SpawnSystem {
   }
 
   private generateNextType(): void {
-    this.nextType = Phaser.Utils.Array.GetRandom(this.spec.brothers);
+    // ★変更: 出現するのは序盤の小さいものだけ（例：最初の3つ）
+    // brothersOrder: ["A", "B", "C", "D", "E", "F"] -> "A", "B", "C" から抽選
+    const spawnableTypes = this.spec.brothersOrder.slice(0, 3);
+    this.nextType = Phaser.Utils.Array.GetRandom(spawnableTypes);
   }
 
   spawnNext(): Brother | null {
