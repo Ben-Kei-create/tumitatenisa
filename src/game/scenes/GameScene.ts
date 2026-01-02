@@ -19,6 +19,7 @@ export class GameScene extends Phaser.Scene {
 
   private rKey!: Phaser.Input.Keyboard.Key;
   private ground!: Phaser.GameObjects.Rectangle;
+  private safetyGround!: Phaser.GameObjects.Rectangle; // ★追加
   private guideLine!: Phaser.GameObjects.Graphics;
   private brotherGroup!: Phaser.Physics.Arcade.Group;
   private particleEmitter!: Phaser.GameObjects.Particles.ParticleEmitter; // ★追加
@@ -114,7 +115,7 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.add.collider(
       this.brotherGroup,
-      this.ground,
+      [this.ground, this.safetyGround],
       (brother, ground) => this.onBrotherLanded(brother)
     );
   }
@@ -182,132 +183,157 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private createEnvironment() {
-    const { width, height } = this.spec.screen;
-    const { baseWidth, baseHeight, bottomMargin } = this.spec.stage;
-
-    const baseX = width / 2;
-    const baseY = height - bottomMargin - baseHeight / 2;
-
-    this.ground = this.add.rectangle(baseX, baseY, baseWidth, baseHeight, 0xE6E6E6);
-    this.physics.add.existing(this.ground, true);
+    this.physics.add.collider(
+    this.brotherGroup,
+    [this.ground, this.safetyGround], // ★修正: 地面とセーフティネット両方と衝突
+    (brother, ground) => this.onBrotherLanded(brother)
+  );
   }
+
+  // ★追加: 合体演出の処理
+  private handleMergeEffect(data: { x: number, y: number, type: string, score: number }) {
+  // ... (existing code, not changing this block but keeping context if needed, but I will replace createEnvironment below separately or here?)
+  // Actually the collider is in create().
+}
+  // Wait, I cannot easily replace two separate blocks.
+  // I will make two separate replace calls. One for create() collider, one for createEnvironment() implementation.
+  // First, let's update createEnvironment.
+
+  private createEnvironment() {
+  const { width, height } = this.spec.screen;
+  const { baseWidth, baseHeight, bottomMargin } = this.spec.stage;
+
+  const baseX = width / 2;
+  const baseY = height - bottomMargin - baseHeight / 2;
+
+  // 1. メインの台座
+  this.ground = this.add.rectangle(baseX, baseY, baseWidth, baseHeight, 0xE6E6E6);
+  this.physics.add.existing(this.ground, true);
+
+  // 2. ★すり抜け防止の分厚い壁（透明）
+  // 台座の底面から下に500px伸ばす
+  const safetyH = 500;
+  const safetyY = baseY + (baseHeight / 2) + (safetyH / 2);
+
+  this.safetyGround = this.add.rectangle(baseX, safetyY, baseWidth, safetyH, 0x000000, 0); // 透明度0で見えない
+  this.physics.add.existing(this.safetyGround, true);
+}
 
   private setupInputHandlers() {
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.gameState.currentBrother && this.gameState.currentBrother.state === BrotherState.HOLDING) {
-        this.dragActive = true;
-      }
-    });
-
-    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (this.dragActive && this.gameState.currentBrother) {
-        const x = Phaser.Math.Clamp(
-          pointer.x,
-          this.spec.spawn.xRange[0] + this.spec.screen.width / 2,
-          this.spec.spawn.xRange[1] + this.spec.screen.width / 2
-        );
-        this.gameState.currentBrother.x = x;
-      }
-    });
-
-    this.input.on('pointerup', () => {
-      if (this.dragActive && this.gameState.currentBrother) {
-        this.dragActive = false;
-        this.gameState.currentBrother.setBrotherState(BrotherState.DROPPING);
-        this.gameState.currentBrother = null;
-      }
-    });
-  }
-
-  update(time: number) {
-    if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
-      this.scene.restart();
-      return;
-    }
-
-    if (this.gameState.gameOver) return;
-
-    // ガイドライン
-    this.guideLine.clear();
+  this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
     if (this.gameState.currentBrother && this.gameState.currentBrother.state === BrotherState.HOLDING) {
-      if (this.spec.input.showDropGuide) {
-        const b = this.gameState.currentBrother;
-        this.guideLine.lineStyle(2, 0xaaaaaa, 0.5);
-        this.guideLine.beginPath();
-        // 円の下端からガイド
-        this.guideLine.moveTo(b.x, b.y + b.displayHeight / 2);
-        this.guideLine.lineTo(b.x, this.ground.y - this.ground.displayHeight / 2);
-        this.guideLine.strokePath();
-      }
+      this.dragActive = true;
     }
+  });
 
-    // 着地判定
-    this.brotherGroup.children.entries.forEach((child) => {
-      const brother = child as Brother;
-      if (brother.state === BrotherState.DROPPING) {
-        const body = brother.body as Phaser.Physics.Arcade.Body;
-
-        // 地面または他のブロックに乗っている、かつ速度がある程度落ち着いたら
-        // 円形の場合、touching.down が反応しにくいことがあるが、ArcadePhysicsではCircleでもBox同様にtouching flagsが立つはず。
-        // ただし転がっている間は isMoving なので、単純に touching.down だけ見ると「転がっているのに着地とみなされる」?
-        // 仕様としては「操作から離れて、何かに接触したら」ロック扱いで良い
-        if (body.touching.down || body.blocked.down) {
-          // 少し滑りを許容するため、即ロックせずとも良いが、
-          // ゲーム進行（次のスポーン）のためにステートは切り替える
-          this.lockBrother(brother);
-        }
-      }
-    });
-
-    // 次のスポーン判定
-    if (!this.gameState.currentBrother && !this.gameState.gameOver && !this.isSpawning) {
-      // 落下中のものがあるか
-      const hasDropping = (this.brotherGroup.children.entries as Brother[])
-        .some(b => b.state === BrotherState.DROPPING);
-
-      // 落下中がなく、かつ全体の速度がある程度落ち着いているか？
-      // 今回はシンプルに「DROPPING」がいなければ次へ
-      if (!hasDropping) {
-        this.isSpawning = true;
-        this.time.delayedCall(this.spec.spawn.nextDelayMs, () => {
-          this.spawnSystem.spawnNext();
-          this.isSpawning = false;
-          this.events.emit('update-next', this.spawnSystem.peekNextType());
-        });
-      }
+  this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    if (this.dragActive && this.gameState.currentBrother) {
+      const x = Phaser.Math.Clamp(
+        pointer.x,
+        this.spec.spawn.xRange[0] + this.spec.screen.width / 2,
+        this.spec.spawn.xRange[1] + this.spec.screen.width / 2
+      );
+      this.gameState.currentBrother.x = x;
     }
+  });
 
-    this.gameOverSystem.update(time);
+  this.input.on('pointerup', () => {
+    if (this.dragActive && this.gameState.currentBrother) {
+      this.dragActive = false;
+      this.gameState.currentBrother.setBrotherState(BrotherState.DROPPING);
+      this.gameState.currentBrother = null;
+    }
+  });
+}
+
+update(time: number) {
+  if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
+    this.scene.restart();
+    return;
   }
+
+  if (this.gameState.gameOver) return;
+
+  // ガイドライン
+  this.guideLine.clear();
+  if (this.gameState.currentBrother && this.gameState.currentBrother.state === BrotherState.HOLDING) {
+    if (this.spec.input.showDropGuide) {
+      const b = this.gameState.currentBrother;
+      this.guideLine.lineStyle(2, 0xaaaaaa, 0.5);
+      this.guideLine.beginPath();
+      // 円の下端からガイド
+      this.guideLine.moveTo(b.x, b.y + b.displayHeight / 2);
+      this.guideLine.lineTo(b.x, this.ground.y - this.ground.displayHeight / 2);
+      this.guideLine.strokePath();
+    }
+  }
+
+  // 着地判定
+  this.brotherGroup.children.entries.forEach((child) => {
+    const brother = child as Brother;
+    if (brother.state === BrotherState.DROPPING) {
+      const body = brother.body as Phaser.Physics.Arcade.Body;
+
+      // 地面または他のブロックに乗っている、かつ速度がある程度落ち着いたら
+      // 円形の場合、touching.down が反応しにくいことがあるが、ArcadePhysicsではCircleでもBox同様にtouching flagsが立つはず。
+      // ただし転がっている間は isMoving なので、単純に touching.down だけ見ると「転がっているのに着地とみなされる」?
+      // 仕様としては「操作から離れて、何かに接触したら」ロック扱いで良い
+      if (body.touching.down || body.blocked.down) {
+        // 少し滑りを許容するため、即ロックせずとも良いが、
+        // ゲーム進行（次のスポーン）のためにステートは切り替える
+        this.lockBrother(brother);
+      }
+    }
+  });
+
+  // 次のスポーン判定
+  if (!this.gameState.currentBrother && !this.gameState.gameOver && !this.isSpawning) {
+    // 落下中のものがあるか
+    const hasDropping = (this.brotherGroup.children.entries as Brother[])
+      .some(b => b.state === BrotherState.DROPPING);
+
+    // 落下中がなく、かつ全体の速度がある程度落ち着いているか？
+    // 今回はシンプルに「DROPPING」がいなければ次へ
+    if (!hasDropping) {
+      this.isSpawning = true;
+      this.time.delayedCall(this.spec.spawn.nextDelayMs, () => {
+        this.spawnSystem.spawnNext();
+        this.isSpawning = false;
+        this.events.emit('update-next', this.spawnSystem.peekNextType());
+      });
+    }
+  }
+
+  this.gameOverSystem.update(time);
+}
 
   private onBrotherCollide(obj1: any, obj2: any): void {
-    const a = obj1 as Brother;
-    const b = obj2 as Brother;
+  const a = obj1 as Brother;
+  const b = obj2 as Brother;
 
-    // 合体判定
-    if (!a.mergeLock && !b.mergeLock && a.getType() === b.getType()) {
-      this.mergeSystem.mergeBrothers(a, b);
-      return;
-    }
+  // 合体判定
+  if(!a.mergeLock && !b.mergeLock && a.getType() === b.getType()) {
+  this.mergeSystem.mergeBrothers(a, b);
+  return;
+}
 
     // 衝突時の減衰は、物理任せにするため削除（または控えめに）
     // 転がってほしいので、速度を殺しすぎない
   }
 
   private onBrotherLanded(brother: any): void {
-    if (brother instanceof Brother && brother.state === BrotherState.DROPPING) {
-      this.lockBrother(brother);
-    }
+  if(brother instanceof Brother && brother.state === BrotherState.DROPPING) {
+  this.lockBrother(brother);
+}
   }
 
   private lockBrother(brother: Brother) {
-    if (brother.state === BrotherState.LOCKED) return;
+  if (brother.state === BrotherState.LOCKED) return;
 
-    this.gameState.score += 10;
+  this.gameState.score += 10;
 
-    // ステートをLOCKEDにする（物理は維持されるがDragが増える）
-    brother.setBrotherState(BrotherState.LOCKED);
-    console.log(`Brother Locked (Active Physics): ${brother.brotherData.id}`);
-  }
+  // ステートをLOCKEDにする（物理は維持されるがDragが増える）
+  brother.setBrotherState(BrotherState.LOCKED);
+  console.log(`Brother Locked (Active Physics): ${brother.brotherData.id}`);
+}
 }

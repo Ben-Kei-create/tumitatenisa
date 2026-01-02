@@ -13,7 +13,7 @@
     "stage": {
         "baseWidth": 240,
         "baseHeight": 40,
-        "bottomMargin": 20
+        "bottomMargin": 150
     },
     "input": {
         "mode": "drag-release",
