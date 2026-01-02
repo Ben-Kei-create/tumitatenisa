@@ -72,7 +72,8 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     if (scene.textures.exists(key)) return;
 
     const radius = size / 2;
-    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+    // ★修正: add: false を削除 (makeはデフォルトでシーンに追加されないため)
+    const graphics = scene.make.graphics({ x: 0, y: 0 });
 
     let color = 0xcccccc;
     if (typeof colorHex === 'string' && colorHex.startsWith('#')) {
@@ -94,6 +95,9 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     graphics.fillCircle(radius + eyeXOffset, eyeY, eyeSize);
 
     graphics.generateTexture(key, size, size);
+
+    // 生成後は不要なので破棄
+    graphics.destroy();
   }
 
   private setupPhysicsBody(size: number) {

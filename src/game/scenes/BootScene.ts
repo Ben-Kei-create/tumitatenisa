@@ -31,13 +31,15 @@ export class BootScene extends Phaser.Scene {
     }
 
     // パーティクル用テクスチャ
-    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
+    // ★修正: add: false を削除
+    const graphics = this.make.graphics({ x: 0, y: 0 });
     graphics.fillStyle(0xffffff, 1);
     graphics.fillCircle(4, 4, 4);
     graphics.generateTexture('particle', 8, 8);
+    graphics.destroy(); // 生成後に破棄
   }
 
   create() {
-    this.scene.start('TitleScene', { spec: this.spec });
+    this.scene.start('GameScene', { spec: this.spec });
   }
 }
