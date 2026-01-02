@@ -7,7 +7,6 @@ export class GameOverSystem {
   private gameState: GameState;
   private scene: Phaser.Scene;
   private brotherGroup: Phaser.Physics.Arcade.Group;
-  private gameOverStartTime: number = 0;
 
   constructor(scene: Phaser.Scene, spec: GameSpec, gameState: GameState, brotherGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -17,43 +16,34 @@ export class GameOverSystem {
   }
 
   update(time: number): void {
-    // 台座外・画面下端チェックはGameScene.checkBaseBounds()で処理
-    // ここでは高さチェックのみ（必要に応じて）
     if (this.gameState.gameOver) return;
 
-    // Use brotherGroup to get all brothers
+    const { height } = this.spec.screen;
     const brothers = this.brotherGroup.children.entries as Brother[];
 
-    // lineY を超える（yが小さい）高さに兄が存在するかチェック
-    const hasBrotherAboveLine = brothers.some(
-      (brother) =>
-        brother !== this.gameState.currentBrother &&
-        brother.y <= this.spec.gameOver.lineY
-    );
+    for (const brother of brothers) {
+      // 操作中(HOLDING)のブロックは除外
+      if (brother === this.gameState.currentBrother) continue;
 
-    if (hasBrotherAboveLine) {
-      if (this.gameOverStartTime === 0) {
-        this.gameOverStartTime = time;
-      }
+      // 画面下端判定
+      // LOCKEDかDROPPINGかに関わらず、画面外（下）に落ちたらアウト
+      // 少し余裕を持たせる (+50px)
+      const isBelowScreen = brother.y > height + 50;
 
-      const elapsed = (time - this.gameOverStartTime) / 1000;
-      if (elapsed >= this.spec.gameOver.lingerSec) {
-        this.triggerGameOver('height_limit');
+      if (isBelowScreen) {
+        // 落下死
+        this.triggerGameOver('fallen_out');
+        return;
       }
-    } else {
-      this.gameOverStartTime = 0;
     }
   }
 
   triggerGameOver(reason?: string): void {
     if (this.gameState.gameOver) return;
 
+    console.log(`Game Over triggered: ${reason}`);
     this.gameState.gameOver = true;
     this.scene.physics.pause();
-
-    // Emit game-over event with reason
     this.scene.events.emit('game-over', reason);
   }
 }
-
-

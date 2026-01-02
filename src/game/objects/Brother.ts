@@ -2,19 +2,18 @@ import { GameSpec } from '../../spec/loadSpec';
 import { BrotherData } from '../types';
 
 export enum BrotherState {
-  AIMING = 'AIMING',
-  DROPPING = 'DROPPING',
-  LOCKED = 'LOCKED',
+  HOLDING = 'HOLDING',   // 上で待機・左右操作中
+  DROPPING = 'DROPPING', // 落下中
+  LOCKED = 'LOCKED',     // 着地済み（パイルの一部）
 }
 
-export class Brother extends Phaser.GameObjects.Container {
+export class Brother extends Phaser.Physics.Arcade.Sprite {
   public brotherData: BrotherData;
-  public state: BrotherState = BrotherState.AIMING;
+  public state: BrotherState = BrotherState.HOLDING;
   public mergeLock: boolean = false;
 
   private spec: GameSpec;
-  private shape!: Phaser.GameObjects.Rectangle | Phaser.GameObjects.Sprite;
-  private label!: Phaser.GameObjects.Text;
+  private label: Phaser.GameObjects.Text;
 
   constructor(
     scene: Phaser.Scene,
@@ -23,14 +22,8 @@ export class Brother extends Phaser.GameObjects.Container {
     type: string,
     spec: GameSpec
   ) {
-    super(scene, x, y);
+    super(scene, x, y, `brother_${type}`);
     this.spec = spec;
-
-    // Size determined by spec
-    const size = spec.brother.size;
-
-    // Container doesn't have setOrigin, we'll handle centering via physics offset
-    this.setSize(size, size);
 
     this.brotherData = {
       id: Phaser.Utils.String.UUID(),
@@ -38,100 +31,121 @@ export class Brother extends Phaser.GameObjects.Container {
       merged: false
     };
 
-    // Visuals
-    this.createVisuals(type, size);
+    const size = spec.brother.size;
+    this.setDisplaySize(size, size);
+
+    // テクスチャ生成（円形に変更）
+    if (!scene.textures.exists(`brother_${type}`)) {
+      this.createFallbackTexture(scene, type, size);
+      this.setTexture(`brother_bg_${type}`);
+    }
 
     scene.add.existing(this);
-  }
+    scene.physics.add.existing(this);
+    this.setupPhysicsBody(size);
 
-  /**
-   * Attach physics body with proper size and offset
-   * Must be called after visual creation
-   */
-  attachPhysics(): void {
-    if (!this.scene.physics) return;
-
-    // Add physics if not already added
-    if (!this.body) {
-      this.scene.physics.add.existing(this);
-    }
-
-    const body = this.body as Phaser.Physics.Arcade.Body;
-    const size = this.spec.brother.size;
-
-    // Set body size to match visual size
-    body.setSize(size, size);
-    
-    // Set offset to center (Container's origin is always 0,0, so we offset by -size/2)
-    body.setOffset(-size / 2, -size / 2);
-
-    // Body settings
-    body.setCollideWorldBounds(true);
-    body.setBounce(this.spec.physics.restitution);
-    body.setFriction(this.spec.physics.friction);
-
-    // Start with NO gravity for AIMING phase
-    body.setAllowGravity(false);
-    body.setImmovable(false);
-  }
-
-  private createVisuals(type: string, size: number) {
-    const colors = {
-      'A': 0xB8D8FF,
-      'B': 0xBFF0D2,
-      'C': 0xFFD7B5,
-      // Default fallback
-      'default': 0xeeeeee
-    };
-    const color = colors[type as keyof typeof colors] || colors['default'];
-
-    const imageKey = `brother_${type}`;
-    if (this.scene.textures.exists(imageKey)) {
-      this.shape = this.scene.add.sprite(0, 0, imageKey);
-      this.shape.setDisplaySize(size, size);
-    } else {
-      this.shape = this.scene.add.rectangle(0, 0, size, size, color);
-      // Add a subtle stroke/shadow if possible, or just keeping it simple for now
-      (this.shape as Phaser.GameObjects.Rectangle).setStrokeStyle(2, 0x000000, 0.1);
-    }
-
-    this.add(this.shape);
-
-    // Text Label
-    this.label = this.scene.add.text(0, 0, type, {
+    this.label = scene.add.text(x, y, type, {
       fontFamily: 'system-ui, sans-serif',
-      fontSize: this.spec.brother.fontSize,
+      fontSize: spec.brother.fontSize,
       color: '#111111',
       fontStyle: 'bold'
     });
     this.label.setOrigin(0.5);
-    this.add(this.label);
+    this.label.setDepth(this.depth + 1);
+  }
+
+  /**
+   * 円形のテクスチャを生成
+   */
+  private createFallbackTexture(scene: Phaser.Scene, type: string, size: number) {
+    const key = `brother_bg_${type}`;
+    if (scene.textures.exists(key)) return;
+
+    const radius = size / 2;
+    const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+    const colors: Record<string, number> = {
+      'A': 0xB8D8FF,
+      'B': 0xBFF0D2,
+      'C': 0xFFD7B5
+    };
+    const color = colors[type] || 0xeeeeee;
+
+    graphics.fillStyle(color, 1);
+    // 円を描画
+    graphics.fillCircle(radius, radius, radius);
+    graphics.lineStyle(2, 0x000000, 0.1);
+    graphics.strokeCircle(radius, radius, radius);
+
+    // テクスチャ生成（サイズは直径）
+    graphics.generateTexture(key, size, size);
+    graphics.destroy();
+  }
+
+  private setupPhysicsBody(size: number) {
+    if (!this.body) return;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+
+    // 円形の当たり判定を設定
+    const radius = size / 2;
+    body.setCircle(radius);
+
+    // setCircleをするとoffsetがずれることがあるため、必要なら調整
+    // generateTextureで作った画像は左上が(0,0)なので、setCircle(radius)で中心が合うはず
+
+    body.setCollideWorldBounds(false); // 画面外落下を許可
+    body.setBounce(this.spec.physics.restitution);
+    body.setFriction(this.spec.physics.friction);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (this.label) {
+      this.label.setPosition(this.x, this.y);
+    }
+  }
+
+  destroy(fromScene?: boolean) {
+    if (this.label) {
+      this.label.destroy();
+    }
+    super.destroy(fromScene);
   }
 
   setBrotherState(newState: BrotherState) {
     this.state = newState;
+    if (!this.body) return;
     const body = this.body as Phaser.Physics.Arcade.Body;
 
     switch (newState) {
-      case BrotherState.AIMING:
+      case BrotherState.HOLDING:
         body.setAllowGravity(false);
         body.setVelocity(0, 0);
+        body.setAngularVelocity(0);
+        body.setImmovable(false);
         break;
 
       case BrotherState.DROPPING:
         body.setAllowGravity(true);
-        // Initial drop might add some small random torque or just let physics handle rotation
         if (this.spec.physics.allowRotation) {
           body.setAngularVelocity(Phaser.Math.Between(-10, 10));
         }
+        body.setImmovable(false);
+        // 空気抵抗などは少なめに
+        body.setDrag(0);
+        body.setAngularDrag(0);
         break;
 
       case BrotherState.LOCKED:
-        // 着地後は半静的扱い：上からぶつかられても動かない
-        body.setImmovable(true);
+        // 物理挙動を維持する（転がり落ちるようにする）
+        body.setAllowGravity(true);
+        body.setImmovable(false); // ★ここをFalseに変更（動けるようにする）
+
+        // ただし、簡単には転がらないように抵抗(Drag)を強める（安定性とのバランス）
+        body.setDrag(500, 500); // 平地では止まるくらい強く
+        body.setAngularDrag(500); // 勝手に回転し続けないように
+
+        // 跳ね返りはなくす
         body.setBounce(0);
-        body.setVelocityX(0);
-        body.setAngularVelocity(0);
         break;
     }
   }

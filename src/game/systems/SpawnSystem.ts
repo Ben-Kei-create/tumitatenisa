@@ -15,13 +15,9 @@ export class SpawnSystem {
     this.spec = spec;
     this.gameState = gameState;
     this.factory = factory;
-    // Initialize next type
     this.generateNextType();
   }
 
-  /**
-   * Peek at the next type without consuming it (for UI display)
-   */
   peekNextType(): string {
     if (!this.nextType) {
       this.generateNextType();
@@ -29,9 +25,6 @@ export class SpawnSystem {
     return this.nextType!;
   }
 
-  /**
-   * Consume the next type and generate a new one
-   */
   consumeNextType(): string {
     if (!this.nextType) {
       this.generateNextType();
@@ -41,45 +34,25 @@ export class SpawnSystem {
     return type;
   }
 
-  /**
-   * Generate a random next type
-   */
   private generateNextType(): void {
     this.nextType = Phaser.Utils.Array.GetRandom(this.spec.brothers);
   }
 
   spawnNext(): Brother | null {
-    console.log('[SpawnSystem] spawnNext called. Current:', !!this.gameState.currentBrother, 'GameOver:', this.gameState.gameOver);
-    if (this.gameState.currentBrother) {
-      console.log('[SpawnSystem] spawnNext aborted: currentBrother exists');
+    if (this.gameState.currentBrother || this.gameState.gameOver) {
       return null;
     }
 
-    if (this.gameState.gameOver) {
-      console.log('[SpawnSystem] spawnNext aborted: gameOver');
-      return null;
-    }
-
-    // Consume next type
-    const type = this.consumeNextType();
-
-    // Spawn at center X, spawn.y
     const spawnX = this.spec.screen.width / 2;
     const spawnY = this.spec.spawn.y;
+    const type = this.consumeNextType();
 
-    console.log('[SpawnSystem] Creating brother of type:', type, 'at', spawnX, spawnY);
-    const brother = this.factory.createBrother(
-      spawnX,
-      spawnY,
-      type
-    );
+    const brother = this.factory.createBrother(spawnX, spawnY, type);
 
-    // Initial State: AIMING
-    brother.setBrotherState(BrotherState.AIMING);
+    // 仕様書準拠: 初期状態は HOLDING
+    brother.setBrotherState(BrotherState.HOLDING);
 
     this.gameState.currentBrother = brother;
-    console.log('[SpawnSystem] Spawn complete. Brother:', brother.brotherData.id);
     return brother;
   }
 }
-

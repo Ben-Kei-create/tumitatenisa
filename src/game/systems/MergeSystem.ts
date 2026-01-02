@@ -7,51 +7,13 @@ export class MergeSystem {
   private spec: GameSpec;
   private scene: Phaser.Scene;
   private gameState: GameState;
-  private factory: BrotherFactory; // Factory injection
-  private mergedThisFrame: Set<string> = new Set();
+  private factory: BrotherFactory;
 
   constructor(scene: Phaser.Scene, spec: GameSpec, gameState: GameState, factory: BrotherFactory) {
     this.scene = scene;
     this.spec = spec;
     this.gameState = gameState;
     this.factory = factory;
-  }
-
-  update(): void {
-    if (!this.scene.physics || !this.scene.physics.world) {
-      return;
-    }
-
-    this.mergedThisFrame.clear();
-
-    // Filter valid brothers (not dropping, not aiming)
-    // Actually, only LOCKED (landed) brothers should merge?
-    // Or DROPPING ones can merge too?
-    // Suika game: dropping ones definitely merge.
-    const brothers = this.scene.children.list.filter(
-      (child) => child instanceof Brother && !child.mergeLock
-    ) as Brother[];
-
-    // Naive O(N^2) check is fine for small N (usually < 50 brothers)
-    for (let i = 0; i < brothers.length; i++) {
-      const a = brothers[i];
-      if (a.mergeLock) continue;
-
-      for (let j = i + 1; j < brothers.length; j++) {
-        const b = brothers[j];
-        if (b.mergeLock) continue;
-
-        // Optimization: Type check first
-        if (a.getType() !== b.getType()) continue;
-
-        // Physics Overlap Check
-        // Note: Arcade Physics overlap uses bounding box.
-        // For circle-like shapes we might want distance check, but boxes are squares here.
-        if (this.scene.physics.overlap(a, b)) {
-          this.mergeBrothers(a, b);
-        }
-      }
-    }
   }
 
   mergeBrothers(a: Brother, b: Brother): void {
@@ -66,34 +28,31 @@ export class MergeSystem {
 
     // Calculate midpoint
     const x = (a.x + b.x) / 2;
-    const y = (a.y + b.y) / 2; // Midpoint is better than min(y) for visual pop
+    const y = (a.y + b.y) / 2;
 
     // Remove old ones
     a.destroy();
     b.destroy();
 
-    // Create new one using Factory
-    // IMPORTANT: New brother should be in DROPPING state but physically active?
-    // Or "LOCKED"state but effectively falling?
-    // Usually newly merged items pop up a bit and fall.
+    // Create new one
+    // 仕様書: 新Brotherは DROPPING 状態
     const newBrother = this.factory.createBrother(x, y, nextType);
 
-    newBrother.setBrotherState(BrotherState.DROPPING); // Enable gravity
+    // ポップアップ効果（少し浮かせて重力を効かせる）
+    newBrother.y -= 10;
+    newBrother.setBrotherState(BrotherState.DROPPING);
 
-    // Pop effect (move up slightly to avoid immediate collision with things below?)
-    // And to look like it popped out.
-    newBrother.y -= 5;
+    // 物理的な勢いを少しつける（真上に跳ねる）
+    const body = newBrother.body as Phaser.Physics.Arcade.Body;
+    body.setVelocityY(-150);
 
-    // Score: 合体報酬（A+A=50, B+B=150, C+C=300）
+    // Score
     const mergeScores: Record<string, number> = {
-      'A': 50,   // A+A → B
-      'B': 150,  // B+B → C
-      'C': 300   // C+C → A（ループボーナス）
+      'A': 50,
+      'B': 150,
+      'C': 300
     };
     const points = mergeScores[type] || 50;
     this.gameState.score += points;
-
-    // TODO: Create Floating Text Effect for Score
   }
 }
-
