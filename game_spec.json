@@ -11,9 +11,9 @@
         "allowRotation": true
     },
     "stage": {
-        "groundY": 804,
-        "groundHeight": 40,
-        "wallThickness": 24
+        "baseWidth": 220,
+        "baseHeight": 40,
+        "baseY": 820
     },
     "brother": {
         "size": 56,

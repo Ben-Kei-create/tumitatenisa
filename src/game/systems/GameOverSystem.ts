@@ -17,15 +17,14 @@ export class GameOverSystem {
   }
 
   update(time: number): void {
+    // 台座外・画面下端チェックはGameScene.checkBaseBounds()で処理
+    // ここでは高さチェックのみ（必要に応じて）
     if (this.gameState.gameOver) return;
 
     // Use brotherGroup to get all brothers
     const brothers = this.brotherGroup.children.entries as Brother[];
 
     // lineY を超える（yが小さい）高さに兄が存在するかチェック
-    // Simplest: y < lineY.
-    // If user is holding one above line, it shouldn't trigger.
-    // So ignore currentBrother.
     const hasBrotherAboveLine = brothers.some(
       (brother) =>
         brother !== this.gameState.currentBrother &&
@@ -39,23 +38,21 @@ export class GameOverSystem {
 
       const elapsed = (time - this.gameOverStartTime) / 1000;
       if (elapsed >= this.spec.gameOver.lingerSec) {
-        this.triggerGameOver();
+        this.triggerGameOver('height_limit');
       }
     } else {
       this.gameOverStartTime = 0;
     }
   }
 
-  private triggerGameOver(): void {
+  triggerGameOver(reason?: string): void {
+    if (this.gameState.gameOver) return;
+
     this.gameState.gameOver = true;
     this.scene.physics.pause();
 
-    // Launch UI Scene for Game Over if not doing it elsewhere?
-    // Or just set state and let GameScene/UIScene handle it.
-    // For now, let's just let it be state.
-    // GameScene listens to this state in update? 
-    // Actually we should launch UIScene overlay here or Emit event.
-    this.scene.events.emit('game-over');
+    // Emit game-over event with reason
+    this.scene.events.emit('game-over', reason);
   }
 }
 

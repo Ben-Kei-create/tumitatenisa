@@ -127,9 +127,11 @@ export class Brother extends Phaser.GameObjects.Container {
         break;
 
       case BrotherState.LOCKED:
-        // Normally stays dynamic but sleeps? Or just effectively static?
-        // In "Suika" style, they stay dynamic to push each other.
-        // So we don't necessarily disable gravity, just logic state.
+        // 着地後は半静的扱い：上からぶつかられても動かない
+        body.setImmovable(true);
+        body.setBounce(0);
+        body.setVelocityX(0);
+        body.setAngularVelocity(0);
         break;
     }
   }

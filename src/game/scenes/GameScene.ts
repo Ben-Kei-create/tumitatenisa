@@ -98,68 +98,45 @@ export class GameScene extends Phaser.Scene {
     });
 
     // --- Collision Setup ---
-    // Brother vs Brother (with merge callback)
+    // Brother vs Brother (合体処理 + 物理制御)
     this.physics.add.collider(
       this.brotherGroup,
       this.brotherGroup,
       (obj1: any, obj2: any) => {
         this.onBrotherCollide(obj1, obj2);
+        // 衝突時の横速度・回転を減衰
+        this.dampenBrotherVelocity(obj1);
+        this.dampenBrotherVelocity(obj2);
       }
     );
 
-    // Brother vs Ground
+    // Brother vs Ground (台座)
     this.physics.add.collider(
       this.brotherGroup,
       this.ground,
       (brother: any) => {
-        // When a brother hits the ground, set it to LOCKED
-        if (brother instanceof Brother && brother.state === BrotherState.DROPPING) {
-          brother.setBrotherState(BrotherState.LOCKED);
-        }
+        this.onBrotherLanded(brother);
       }
     );
-
-    // Brother vs Walls
-    this.physics.add.collider(this.brotherGroup, this.walls);
   }
 
   private createEnvironment() {
     const { width, height } = this.spec.screen;
-    const { groundY, groundHeight, wallThickness } = this.spec.stage;
+    const { baseWidth, baseHeight, baseY } = this.spec.stage;
 
-    // Ground
+    // 台座（画面中央の狭い範囲）
+    const baseX = width / 2;
     this.ground = this.add.rectangle(
-      width / 2,
-      groundY + groundHeight / 2, // center origin
-      width,
-      groundHeight,
+      baseX,
+      baseY + baseHeight / 2, // center origin
+      baseWidth,
+      baseHeight,
       0xE6E6E6
     );
     this.physics.add.existing(this.ground, true); // static
 
-    // Walls
+    // 壁は削除（台座外はゲームオーバー）
     this.walls = this.physics.add.staticGroup();
-
-    // Left Wall
-    const leftWall = this.add.rectangle(
-      wallThickness / 2,
-      height / 2,
-      wallThickness,
-      height,
-      0xDDDDDD
-    ).setAlpha(0.5);
-    this.walls.add(leftWall);
-
-    // Right Wall
-    const rightWall = this.add.rectangle(
-      width - wallThickness / 2,
-      height / 2,
-      wallThickness,
-      height,
-      0xDDDDDD
-    ).setAlpha(0.5);
-    this.walls.add(rightWall);
-
   }
 
   private setupInputHandlers() {
@@ -213,9 +190,8 @@ export class GameScene extends Phaser.Scene {
         this.guideLine.lineStyle(2, 0xaaaaaa, 0.5);
         this.guideLine.beginPath();
         this.guideLine.moveTo(startX, startY);
-        // Draw down to groundY or highest object?
-        // Simple: draw to groundY
-        this.guideLine.lineTo(startX, this.spec.stage.groundY);
+        // Draw down to base (台座)
+        this.guideLine.lineTo(startX, this.spec.stage.baseY);
         this.guideLine.strokePath();
       }
     }
@@ -262,12 +238,12 @@ export class GameScene extends Phaser.Scene {
         // The simplest way in `update` without state is tricky. 
         // Let's check `spawnSystem` state? No.
         // Let's add `isSpawning` flag to GameScene class.
-        if (!(this as any).isSpawning) {
+        if (!this.isSpawning) {
           console.log('[GameScene] No falling blocks. Scheduling next spawn.');
-          (this as any).isSpawning = true;
+          this.isSpawning = true;
           this.time.delayedCall(this.spec.spawn.nextDelayMs, () => {
             this.spawnSystem.spawnNext();
-            (this as any).isSpawning = false;
+            this.isSpawning = false;
 
             // Emit update-next event for UI after spawn
             this.time.delayedCall(50, () => {
@@ -277,6 +253,9 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+
+    // 台座外チェック（毎フレーム）
+    this.checkBaseBounds();
 
     // update systems
     // Note: Merge is now handled in onBrotherCollide callback
@@ -301,6 +280,70 @@ export class GameScene extends Phaser.Scene {
 
     // Trigger merge
     this.mergeSystem.mergeBrothers(a, b);
+  }
+
+  /**
+   * Handle brother landing on ground (台座)
+   */
+  private onBrotherLanded(brother: any): void {
+    if (!(brother instanceof Brother)) return;
+
+    if (brother.state === BrotherState.DROPPING) {
+      // 着地時のスコア加点
+      this.gameState.score += 10;
+
+      // LOCK状態に変更（setImmovableが設定される）
+      brother.setBrotherState(BrotherState.LOCKED);
+
+      // 横速度・回転を完全に停止
+      const body = brother.body as Phaser.Physics.Arcade.Body;
+      body.setVelocityX(0);
+      body.setAngularVelocity(0);
+    }
+  }
+
+  /**
+   * Dampen brother velocity on collision (横速度・回転を減衰)
+   */
+  private dampenBrotherVelocity(brother: any): void {
+    if (!(brother instanceof Brother)) return;
+    if (brother.state === BrotherState.LOCKED) return; // 既に着地済みはスキップ
+
+    const body = brother.body as Phaser.Physics.Arcade.Body;
+    // 横速度を強制的に減衰
+    body.setVelocityX(body.velocity.x * 0.2);
+    body.setAngularVelocity(body.angularVelocity * 0.2);
+  }
+
+  /**
+   * Check if any brother is outside the base bounds (台座外チェック)
+   */
+  private checkBaseBounds(): void {
+    if (this.gameState.gameOver) return;
+
+    const { baseWidth } = this.spec.stage;
+    const baseX = this.spec.screen.width / 2;
+    const halfWidth = baseWidth / 2;
+    const minX = baseX - halfWidth;
+    const maxX = baseX + halfWidth;
+    const screenHeight = this.spec.screen.height;
+
+    const brothers = this.brotherGroup.children.entries as Brother[];
+
+    for (const brother of brothers) {
+      // 台座外チェック（中心X）
+      if (brother.x < minX || brother.x > maxX) {
+        this.gameOverSystem.triggerGameOver('base_out');
+        return;
+      }
+
+      // 画面下端チェック（底面Y）
+      const bottomY = brother.y + (brother.height / 2);
+      if (bottomY > screenHeight) {
+        this.gameOverSystem.triggerGameOver('bottom_out');
+        return;
+      }
+    }
   }
 }
 

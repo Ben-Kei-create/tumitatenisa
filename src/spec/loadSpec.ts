@@ -13,9 +13,9 @@ export interface GameSpec {
     allowRotation: boolean;
   };
   stage: {
-    groundY: number;
-    groundHeight: number;
-    wallThickness: number;
+    baseWidth: number;
+    baseHeight: number;
+    baseY: number;
   };
   brother: {
     size: number;

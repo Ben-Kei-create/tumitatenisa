@@ -84,9 +84,13 @@ export class MergeSystem {
     // And to look like it popped out.
     newBrother.y -= 5;
 
-    // Score
-    const multiplier = this.spec.score.typeMultiplier[nextType] || 1;
-    const points = this.spec.score.mergeBase * multiplier;
+    // Score: 合体報酬（A+A=50, B+B=150, C+C=300）
+    const mergeScores: Record<string, number> = {
+      'A': 50,   // A+A → B
+      'B': 150,  // B+B → C
+      'C': 300   // C+C → A（ループボーナス）
+    };
+    const points = mergeScores[type] || 50;
     this.gameState.score += points;
 
     // TODO: Create Floating Text Effect for Score
