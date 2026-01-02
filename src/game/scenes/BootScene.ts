@@ -12,17 +12,25 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // 画像読み込み：brothersOrder（配列）を使用
-    // ※画像ファイルがない場合、コンソールに404エラーが出ますが、
-    // ゲーム側で自動生成（Brother.ts）するため動作に影響はありません。
-    if (this.spec.brothersOrder) {
-      for (const type of this.spec.brothersOrder) {
-        const imagePath = `assets/brothers/${type}.png`;
-        this.load.image(`brother_${type}`, imagePath);
+    // 画像ロード: brothersOrderがあればそれを使う、なければObject.keys、それもなければArrayとみなす
+    let types: string[] = [];
+
+    if (this.spec.brothersOrder && Array.isArray(this.spec.brothersOrder)) {
+      types = this.spec.brothersOrder;
+    } else if (this.spec.brothers) {
+      if (Array.isArray(this.spec.brothers)) {
+        types = this.spec.brothers;
+      } else {
+        types = Object.keys(this.spec.brothers);
       }
     }
 
-    // パーティクル用テクスチャ生成
+    for (const type of types) {
+      const imagePath = `assets/brothers/${type}.png`;
+      this.load.image(`brother_${type}`, imagePath);
+    }
+
+    // パーティクル用テクスチャ
     const graphics = this.make.graphics({ x: 0, y: 0, add: false });
     graphics.fillStyle(0xffffff, 1);
     graphics.fillCircle(4, 4, 4);

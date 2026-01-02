@@ -25,8 +25,19 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, `brother_${type}`);
     this.spec = spec;
 
-    const brotherSpec = this.spec.brothers[type];
-    const size = brotherSpec.size;
+    // ★修正: データ取得の安全化（万が一データがなくてもクラッシュさせない）
+    let size = 40; // デフォルト値
+    let color = "#cccccc";
+
+    // brothersがオブジェクト形式かチェック
+    if (this.spec.brothers && !Array.isArray(this.spec.brothers) && this.spec.brothers[type]) {
+      const brotherSpec = this.spec.brothers[type];
+      size = brotherSpec.size || 40;
+      color = brotherSpec.color || "#cccccc";
+    } else {
+      // 旧仕様(配列)の場合やデータ不整合時のフォールバック
+      console.warn(`Brother spec missing for type: ${type}. Using defaults.`);
+    }
 
     this.brotherData = {
       id: Phaser.Utils.String.UUID(),
@@ -37,7 +48,7 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     this.setDisplaySize(size, size);
 
     if (!scene.textures.exists(`brother_${type}`)) {
-      this.createFallbackTexture(scene, type, size, brotherSpec.color);
+      this.createFallbackTexture(scene, type, size, color);
       this.setTexture(`brother_bg_${type}`);
     }
 
@@ -62,7 +73,10 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     const radius = size / 2;
     const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
 
-    const color = parseInt(colorHex.replace('#', ''), 16);
+    let color = 0xcccccc;
+    if (typeof colorHex === 'string' && colorHex.startsWith('#')) {
+      color = parseInt(colorHex.replace('#', ''), 16);
+    }
 
     graphics.fillStyle(color, 1);
     graphics.fillCircle(radius, radius, radius);
@@ -83,10 +97,13 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     if (!this.body) return;
     const body = this.body as Phaser.Physics.Arcade.Body;
 
+    // ★重要: NaNチェック
+    if (isNaN(size) || size <= 0) size = 40;
+
     const radius = size / 2;
     body.setCircle(radius);
 
-    // ★修正: 画面端の壁との衝突を無効化（奈落へ落ちるようにする）
+    // 画面端の壁との衝突を無効化
     body.setCollideWorldBounds(false);
 
     body.setBounce(this.spec.physics.restitution);
@@ -132,7 +149,6 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
       case BrotherState.LOCKED:
         body.setAllowGravity(true);
         body.setImmovable(false);
-        // 転がる余地を残すためDragは適度に
         body.setDrag(300, 300);
         body.setAngularDrag(300);
         body.setBounce(0.05);

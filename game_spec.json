@@ -39,6 +39,7 @@
         "heightPerSec": 0,
         "heightClampY": 0
     },
+    "//": "--- ここが重要：brothersOrderとbrothers(Object)の両方が必要 ---",
     "brothersOrder": [
         "A",
         "B",
