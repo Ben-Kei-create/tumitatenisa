@@ -12,7 +12,7 @@ export class BrotherFactory {
     }
 
     createBrother(x: number, y: number, type: string): Brother {
-        // Sprite版Brotherはコンストラクタ内で物理設定を行うためシンプルに
+        // Sprite版はコンストラクタで物理設定が完了するためシンプルに
         const brother = new Brother(this.scene, x, y, type, this.spec);
 
         if (this.brotherGroup) {
