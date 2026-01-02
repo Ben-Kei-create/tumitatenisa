@@ -40,6 +40,12 @@ export class BootScene extends Phaser.Scene {
       graphics.generateTexture(`brother_${type}`, size, size);
       graphics.destroy();
     }
+
+    // ★追加: パーティクル用の白い丸（色を変えて使い回す）
+    const graphics = this.make.graphics({ x: 0, y: 0 });
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(4, 4, 4); // 半径4pxの円
+    graphics.generateTexture('particle', 8, 8);
   }
 
   create() {

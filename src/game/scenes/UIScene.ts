@@ -7,7 +7,10 @@ export class UIScene extends Phaser.Scene {
   private gameSceneEvents!: Phaser.Events.EventEmitter;
 
   private scoreText!: Phaser.GameObjects.Text;
+  private highScoreText!: Phaser.GameObjects.Text; // ★追加
+  private highScore: number = 0; // ★追加
   private gameOverContainer!: Phaser.GameObjects.Container;
+  private nextPreviewSprite!: Phaser.GameObjects.Sprite;
 
   constructor() {
     super({ key: 'UIScene' });
@@ -20,9 +23,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   create() {
+    this.loadHighScore(); // ★読み込み
+
     // HUD Layer
     this.createHUD();
-    this.createNextDisplay(); // ★追加
+    this.createNextDisplay();
 
     // Overlay Layer (Hidden initially)
     this.createGameOverOverlay();
@@ -33,6 +38,20 @@ export class UIScene extends Phaser.Scene {
       this.gameSceneEvents.on('update-next', (nextType: string) => {
         this.updateNextDisplay(nextType);
       }, this);
+    }
+  }
+
+  private loadHighScore() {
+    const saved = localStorage.getItem('tumitatenisa_highscore');
+    this.highScore = saved ? parseInt(saved, 10) : 0;
+  }
+
+  private saveHighScore() {
+    if (this.gameState.score > this.highScore) {
+      this.highScore = this.gameState.score;
+      localStorage.setItem('tumitatenisa_highscore', this.highScore.toString());
+      // ハイスコア更新演出（テキスト色を変えるなど）
+      this.highScoreText.setColor('#ff0000');
     }
   }
 
@@ -79,6 +98,14 @@ export class UIScene extends Phaser.Scene {
       fontFamily: 'system-ui, sans-serif',
       fontSize: '32px',
       color: '#111111',
+      fontStyle: 'bold'
+    });
+
+    // ★追加: ハイスコア表示 (右上に小さく)
+    this.highScoreText = this.add.text(20, 55, `Best: ${this.highScore}`, {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '16px',
+      color: '#666',
       fontStyle: 'bold'
     });
     // Ensure HUD is on top of everything (though this is a separate scene, so it's on top of GameScene naturally)
@@ -163,6 +190,12 @@ export class UIScene extends Phaser.Scene {
   update() {
     if (this.gameState && this.scoreText) {
       this.scoreText.setText(`Score: ${this.gameState.score}`);
+
+      // ゲーム中にハイスコアを超えたらリアルタイム更新
+      if (this.gameState.score > this.highScore) {
+        this.highScoreText.setText(`Best: ${this.gameState.score}`);
+        this.saveHighScore();
+      }
     }
   }
 }

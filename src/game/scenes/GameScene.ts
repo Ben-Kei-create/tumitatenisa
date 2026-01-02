@@ -20,7 +20,9 @@ export class GameScene extends Phaser.Scene {
   private rKey!: Phaser.Input.Keyboard.Key;
   private ground!: Phaser.GameObjects.Rectangle;
   private guideLine!: Phaser.GameObjects.Graphics;
+  private guideLine!: Phaser.GameObjects.Graphics;
   private brotherGroup!: Phaser.Physics.Arcade.Group;
+  private particleEmitter!: Phaser.GameObjects.Particles.ParticleEmitter; // ★追加
 
   private dragActive: boolean = false;
   private isSpawning: boolean = false;
@@ -58,6 +60,22 @@ export class GameScene extends Phaser.Scene {
       collideWorldBounds: false
     });
 
+    // --- ★追加: パーティクルエミッターの作成 ---
+    this.particleEmitter = this.add.particles(0, 0, 'particle', {
+      lifespan: 600,
+      speed: { min: 150, max: 250 },
+      scale: { start: 1, end: 0 },
+      blendMode: 'ADD',
+      emitting: false
+    });
+    // ブロックより手前に表示
+    this.particleEmitter.setDepth(10);
+
+    // --- ★追加: 合体イベントのリスナー登録 ---
+    this.events.on('merge-success', (data: any) => {
+      this.handleMergeEffect(data);
+    });
+
     this.brotherFactory = new BrotherFactory(this, this.spec);
     this.brotherFactory.setBrotherGroup(this.brotherGroup);
 
@@ -92,6 +110,48 @@ export class GameScene extends Phaser.Scene {
       this.ground,
       (brother, ground) => this.onBrotherLanded(brother)
     );
+  }
+
+  // ★追加: 合体演出の処理
+  private handleMergeEffect(data: { x: number, y: number, type: string, score: number }) {
+    // 1. スコア加算
+    this.gameState.score += data.score;
+
+    // 2. パーティクル発射
+    const colors: Record<string, number> = {
+      'A': 0xB8D8FF,
+      'B': 0xBFF0D2,
+      'C': 0xFFD7B5
+    };
+    const color = colors[data.type] || 0xffffff;
+
+    // パーティクルの色を設定して爆発させる
+    this.particleEmitter.setPosition(data.x, data.y);
+    this.particleEmitter.particleTint = color;
+    this.particleEmitter.explode(16); // 16個飛び散る
+
+    // 3. フローティングテキスト（+50）
+    const scoreText = this.add.text(data.x, data.y, `+${data.score}`, {
+      fontFamily: 'system-ui',
+      fontSize: '24px',
+      color: '#111',
+      fontStyle: 'bold',
+      stroke: '#fff',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    scoreText.setDepth(20);
+
+    // テキストがふわっと上がって消える
+    this.tweens.add({
+      targets: scoreText,
+      y: data.y - 50,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power2',
+      onComplete: () => {
+        scoreText.destroy();
+      }
+    });
   }
 
   private createEnvironment() {

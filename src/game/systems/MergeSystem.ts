@@ -64,6 +64,13 @@ export class MergeSystem {
       'C': 300
     };
     const points = mergeScores[type] || 50;
-    this.gameState.score += points;
+
+    // GameScene経由でイベント発火
+    this.scene.events.emit('merge-success', {
+      x: x,
+      y: y,
+      type: type,   // 合体前のタイプ（色用）
+      score: points
+    });
   }
 }
