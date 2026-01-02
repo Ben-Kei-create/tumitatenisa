@@ -49,7 +49,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('GameScene', { spec: this.spec });
+    // ★変更: いきなりゲーム開始せず、タイトルへ飛ばす
+    this.scene.start('TitleScene', { spec: this.spec });
   }
 }
 

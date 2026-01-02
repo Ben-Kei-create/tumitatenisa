@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameSpec } from '../spec/loadSpec';
 import { BootScene } from './scenes/BootScene';
+import { TitleScene } from './scenes/TitleScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 
@@ -21,7 +22,7 @@ export function createGame(spec: GameSpec, containerId: string = 'app'): Phaser.
         debug: false
       }
     },
-    scene: [BootScene, GameScene, UIScene]
+    scene: [BootScene, TitleScene, GameScene, UIScene]
   };
 
   const game = new Phaser.Game(config);

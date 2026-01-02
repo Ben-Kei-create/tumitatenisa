@@ -104,8 +104,12 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     // generateTextureで作った画像は左上が(0,0)なので、setCircle(radius)で中心が合うはず
 
     body.setCollideWorldBounds(false); // 画面外落下を許可
-    body.setBounce(this.spec.physics.restitution);
-    body.setFriction(this.spec.physics.friction);
+    // ★修正: 反発を抑えて、少し重さを感じるように
+    // 旧: body.setBounce(this.spec.physics.restitution);
+    body.setBounce(0.1);
+
+    // ★修正: 摩擦・空気抵抗の設定（spec値より優先して調整）
+    body.setFriction(0.5);
   }
 
   preUpdate(time: number, delta: number) {
@@ -141,22 +145,19 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
           body.setAngularVelocity(Phaser.Math.Between(-10, 10));
         }
         body.setImmovable(false);
-        // 空気抵抗などは少なめに
-        body.setDrag(0);
-        body.setAngularDrag(0);
+        // ★修正: 落下中も少し空気抵抗を入れて制御しやすくする
+        body.setDrag(100, 100);
+        body.setAngularDrag(100);
         break;
 
       case BrotherState.LOCKED:
-        // 物理挙動を維持する（転がり落ちるようにする）
         body.setAllowGravity(true);
-        body.setImmovable(false); // ★ここをFalseに変更（動けるようにする）
+        body.setImmovable(false);
 
-        // ただし、簡単には転がらないように抵抗(Drag)を強める（安定性とのバランス）
-        body.setDrag(500, 500); // 平地では止まるくらい強く
-        body.setAngularDrag(500); // 勝手に回転し続けないように
-
-        // 跳ね返りはなくす
-        body.setBounce(0);
+        // ★修正: 転がりすぎ防止のため、強力な抵抗をかける
+        body.setDrag(300, 300);
+        body.setAngularDrag(300);
+        body.setBounce(0.1);
         break;
     }
   }
