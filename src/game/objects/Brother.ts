@@ -7,7 +7,7 @@ export enum BrotherState {
   LOCKED = 'LOCKED',
 }
 
-// ★修正: ContainerではなくPhysics.Arcade.Spriteを継承
+// Ensure Brother extends Sprite, NOT Container
 export class Brother extends Phaser.Physics.Arcade.Sprite {
   public brotherData: BrotherData;
   public state: BrotherState = BrotherState.AIMING;
@@ -26,11 +26,9 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, `brother_${type}`);
     this.spec = spec;
 
-    // データ安全取得
     let size = 40;
     let color = "#cccccc";
 
-    // データ構造の揺らぎに対応（配列でもオブジェクトでも）
     if (this.spec.brothers && !Array.isArray(this.spec.brothers) && (this.spec.brothers as any)[type]) {
       const bSpec = (this.spec.brothers as any)[type];
       size = bSpec.size || 40;
@@ -43,10 +41,10 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
       merged: false
     };
 
-    // サイズ設定
+    if (isNaN(size) || size <= 0) size = 40;
     this.setDisplaySize(size, size);
 
-    // 画像がない場合のテクスチャ生成
+    // Explicit texture check and fallback
     if (!scene.textures.exists(`brother_${type}`)) {
       this.createFallbackTexture(scene, type, size, color);
       this.setTexture(`brother_bg_${type}`);
@@ -56,7 +54,6 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
     this.setupPhysicsBody(size);
 
-    // テキストラベル（Spriteに追従させる）
     this.label = scene.add.text(x, y, type, {
       fontFamily: 'system-ui, sans-serif',
       fontSize: `${Math.floor(size * 0.45)}px`,
@@ -72,7 +69,7 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     if (scene.textures.exists(key)) return;
 
     const radius = size / 2;
-    // ★修正: add: false を削除 (makeはデフォルトでシーンに追加されないため)
+    // Removing 'add: false' as it's not valid for make.graphics
     const graphics = scene.make.graphics({ x: 0, y: 0 });
 
     let color = 0xcccccc;
@@ -80,13 +77,11 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
       color = parseInt(colorHex.replace('#', ''), 16);
     }
 
-    // 本体
     graphics.fillStyle(color, 1);
     graphics.fillCircle(radius, radius, radius);
     graphics.lineStyle(2, 0x000000, 0.1);
     graphics.strokeCircle(radius, radius, radius);
 
-    // 顔
     graphics.fillStyle(0x000000, 0.6);
     const eyeSize = size * 0.12;
     const eyeY = radius - (size * 0.15);
@@ -96,7 +91,7 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
 
     graphics.generateTexture(key, size, size);
 
-    // 生成後は不要なので破棄
+    // Destroy graphics after texture generation
     graphics.destroy();
   }
 
@@ -104,19 +99,15 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
     if (!this.body) return;
     const body = this.body as Phaser.Physics.Arcade.Body;
 
-    if (isNaN(size) || size <= 0) size = 40;
-
     const radius = size / 2;
     body.setCircle(radius);
 
-    // ★重要: 画面外の壁衝突を無効化（落ちるようにする）
-    body.setCollideWorldBounds(false);
+    body.setCollideWorldBounds(false); // Valid: falling off stage
 
     body.setBounce(this.spec.physics.restitution);
     body.setFriction(this.spec.physics.friction);
   }
 
-  // 毎フレーム実行：ラベル位置同期
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
     if (this.label) {
@@ -156,7 +147,6 @@ export class Brother extends Phaser.Physics.Arcade.Sprite {
       case BrotherState.LOCKED:
         body.setAllowGravity(true);
         body.setImmovable(false);
-        // 転がるが、いつかは止まるように抵抗をセット
         body.setDrag(300, 300);
         body.setAngularDrag(300);
         body.setBounce(0.05);
