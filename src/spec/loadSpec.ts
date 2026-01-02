@@ -15,7 +15,7 @@ export interface GameSpec {
   stage: {
     baseWidth: number;
     baseHeight: number;
-    baseY: number;
+    bottomMargin: number;
   };
   brother: {
     size: number;

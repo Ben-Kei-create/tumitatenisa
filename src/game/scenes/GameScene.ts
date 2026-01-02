@@ -122,17 +122,21 @@ export class GameScene extends Phaser.Scene {
 
   private createEnvironment() {
     const { width, height } = this.spec.screen;
-    const { baseWidth, baseHeight, baseY } = this.spec.stage;
+    const { baseWidth, baseHeight, bottomMargin } = this.spec.stage;
 
     // 台座（画面中央の狭い範囲）
+    // baseX = 画面中央、baseY = 画面下端 - bottomMargin - baseHeight/2
     const baseX = width / 2;
+    const baseY = height - bottomMargin - baseHeight / 2;
+    
     this.ground = this.add.rectangle(
       baseX,
-      baseY + baseHeight / 2, // center origin
+      baseY,
       baseWidth,
       baseHeight,
       0xE6E6E6
     );
+    // 物理bodyを付与（見た目と物理を一致）
     this.physics.add.existing(this.ground, true); // static
 
     // 壁は削除（台座外はゲームオーバー）
@@ -191,7 +195,9 @@ export class GameScene extends Phaser.Scene {
         this.guideLine.beginPath();
         this.guideLine.moveTo(startX, startY);
         // Draw down to base (台座)
-        this.guideLine.lineTo(startX, this.spec.stage.baseY);
+        const { baseHeight, bottomMargin } = this.spec.stage;
+        const baseY = this.spec.screen.height - bottomMargin - baseHeight / 2;
+        this.guideLine.lineTo(startX, baseY);
         this.guideLine.strokePath();
       }
     }
@@ -254,8 +260,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // 台座外チェック（毎フレーム）
-    this.checkBaseBounds();
+    // 台座外チェックはLOCK後のブロックのみ（落下中はチェックしない）
 
     // update systems
     // Note: Merge is now handled in onBrotherCollide callback
@@ -299,6 +304,9 @@ export class GameScene extends Phaser.Scene {
       const body = brother.body as Phaser.Physics.Arcade.Body;
       body.setVelocityX(0);
       body.setAngularVelocity(0);
+
+      // 着地確定後に台座外チェック（LOCK後のみ判定）
+      this.checkBrotherBaseBounds(brother);
     }
   }
 
@@ -316,10 +324,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Check if any brother is outside the base bounds (台座外チェック)
+   * Check if a LOCKED brother is outside the base bounds (台座外チェック)
+   * 落下中（DROPPING）は絶対にチェックしない
    */
-  private checkBaseBounds(): void {
+  private checkBrotherBaseBounds(brother: Brother): void {
     if (this.gameState.gameOver) return;
+    // 落下中は絶対にチェックしない
+    if (brother.state !== BrotherState.LOCKED) return;
 
     const { baseWidth } = this.spec.stage;
     const baseX = this.spec.screen.width / 2;
@@ -328,21 +339,17 @@ export class GameScene extends Phaser.Scene {
     const maxX = baseX + halfWidth;
     const screenHeight = this.spec.screen.height;
 
-    const brothers = this.brotherGroup.children.entries as Brother[];
+    // 台座外チェック（中心X）
+    if (brother.x < minX || brother.x > maxX) {
+      this.gameOverSystem.triggerGameOver('base_out');
+      return;
+    }
 
-    for (const brother of brothers) {
-      // 台座外チェック（中心X）
-      if (brother.x < minX || brother.x > maxX) {
-        this.gameOverSystem.triggerGameOver('base_out');
-        return;
-      }
-
-      // 画面下端チェック（底面Y）
-      const bottomY = brother.y + (brother.height / 2);
-      if (bottomY > screenHeight) {
-        this.gameOverSystem.triggerGameOver('bottom_out');
-        return;
-      }
+    // 画面下端チェック（底面Y）
+    const bottomY = brother.y + (brother.height / 2);
+    if (bottomY > screenHeight) {
+      this.gameOverSystem.triggerGameOver('bottom_out');
+      return;
     }
   }
 }
