@@ -20,7 +20,6 @@ export class GameScene extends Phaser.Scene {
   private rKey!: Phaser.Input.Keyboard.Key;
   private ground!: Phaser.GameObjects.Rectangle;
   private guideLine!: Phaser.GameObjects.Graphics;
-  private guideLine!: Phaser.GameObjects.Graphics;
   private brotherGroup!: Phaser.Physics.Arcade.Group;
   private particleEmitter!: Phaser.GameObjects.Particles.ParticleEmitter; // ★追加
 
