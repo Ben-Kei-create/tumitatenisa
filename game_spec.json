@@ -1,0 +1,5 @@
+{
+  "title": "積み立てNISAN",
+  "brothers": ["A", "B", "C"],
+  "merge": { "A": "B", "B": "C", "C": "A" }
+}
