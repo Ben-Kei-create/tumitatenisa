@@ -8,10 +8,13 @@ import { GameOverScene } from './scenes/GameOverScene'; // ★追加
 
 export function createGame(spec: GameSpec, containerId: string = 'app'): Phaser.Game {
   const config: Phaser.Types.Core.GameConfig = {
-    // ...
+    type: Phaser.AUTO,
+    width: spec.screen.width,
+    height: spec.screen.height,
+    parent: containerId,
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH
+      mode: Phaser.Scale.FIT, // 親コンテナの範囲内で最大化（アスペクト比維持）
+      autoCenter: Phaser.Scale.CENTER_BOTH // コンテナ内で中央寄せ
     },
     physics: {
       default: 'arcade',
@@ -20,7 +23,6 @@ export function createGame(spec: GameSpec, containerId: string = 'app'): Phaser.
         debug: false
       }
     },
-    // ★GameOverScene をリストに追加
     scene: [BootScene, TitleScene, GameScene, UIScene, GameOverScene]
   };
 
